@@ -84,13 +84,24 @@ class DiabetesModel(BaseEstimator, ClassifierMixin):
         print(confusion_matrix(y_true, y_pred))
 
     def explain(self, X):
-        """
-        Affiche un graphique SHAP des contributions des features.
-        """
         model = self.pipeline.named_steps['model']
-        explainer = shap.Explainer(model, self.pipeline.named_steps['scaler'].transform(X))
-        shap_values = explainer(self.pipeline.named_steps['scaler'].transform(X))
-        shap.summary_plot(shap_values, X, plot_type='bar')
+        scaler = self.pipeline.named_steps['scaler']
+        X_scaled = scaler.transform(X)
+
+        try:
+            # 💡 TreeExplainer + désactivation du check pour les forêts
+            explainer = shap.Explainer(model, X_scaled)
+            # Astuce : SHAP râle souvent sur les RandomForest → on désactive additivity si besoin
+            if hasattr(model, "estimators_") and not hasattr(model, "get_booster"):  # RandomForest-like
+                shap_values = explainer(X_scaled, check_additivity=False)
+            else:
+                shap_values = explainer(X_scaled)
+
+            print("📌 Interprétation SHAP (importance des features)")
+            shap.summary_plot(shap_values, X, plot_type='bar')
+
+        except Exception as e:
+            print(f"❌ Erreur SHAP : {e}")
 
     def check_bias_by_age(self, X, y_true):
         """
