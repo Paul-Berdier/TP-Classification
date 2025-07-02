@@ -16,11 +16,13 @@ class DiabetesModel(BaseEstimator, ClassifierMixin):
     Supporte RandomForest et XGBoost, avec explicabilité via SHAP.
     """
 
-    def __init__(self, model_type='random_forest'):
+    def __init__(self, model_type='xgboost', n_estimators=100, max_depth=3, learning_rate=0.1):
         self.model_type = model_type
-        self.pipeline = None
-        self.model_ = None
-        self.scaler_ = None
+        self.n_estimators = n_estimators
+        self.max_depth = max_depth
+        self.learning_rate = learning_rate
+
+        self.pipeline = None  # Nécessaire pour éviter erreurs sur get_params/set_params
         self._build_pipeline()
 
     def _build_pipeline(self):
@@ -31,7 +33,13 @@ class DiabetesModel(BaseEstimator, ClassifierMixin):
         if self.model_type == 'random_forest':
             self.model_ = RandomForestClassifier(random_state=42)
         elif self.model_type == 'xgboost':
-            self.model_ = XGBClassifier(use_label_encoder=False, eval_metric='logloss', random_state=42)
+            self.model_ = XGBClassifier(
+                                            eval_metric="logloss",
+                                            n_estimators=self.n_estimators,
+                                            max_depth=self.max_depth,
+                                            learning_rate=self.learning_rate,
+                                            random_state=42
+                                        )
         else:
             raise ValueError("model_type must be 'random_forest' or 'xgboost'")
 
@@ -59,11 +67,11 @@ class DiabetesModel(BaseEstimator, ClassifierMixin):
         """
         return self.pipeline.predict_proba(X)
 
-    def score(self, X, y):
-        """
-        Retourne l’accuracy du modèle.
-        """
-        return self.pipeline.score(X, y)
+    # def score(self, X, y):
+    #     """
+    #     Retourne l’accuracy du modèle.
+    #     """
+    #     return self.pipeline.score(X, y)
 
     def evaluate(self, X, y_true):
         """
